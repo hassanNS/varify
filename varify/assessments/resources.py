@@ -37,17 +37,18 @@ class AssessmentsResource(AssessmentResourceBase):
         return HttpResponse(status=codes.no_content)
 
     def post(self, request):
+	print "first!"
         data = request.data
-
+	print "hello there"
         if hasattr(request, 'user'):
             data['user'] = request.user.id
+	    print "I got here"
         else:
             response = HttpResponse(status=codes.unprocessable_entity,
                                     content="Request user is not valid.")
             return response
 
         form = AssessmentForm(data)
-
         if form.is_valid():
             instance = form.save()
 
@@ -55,6 +56,7 @@ class AssessmentsResource(AssessmentResourceBase):
                                     content=self.prepare(instance),
                                     mimetype='application/json')
         else:
+	    print form.errors
             response = HttpResponse(status=codes.unprocessable_entity,
                                     content=dict(form.errors))
 
@@ -81,6 +83,7 @@ class AssessmentResource(AssessmentResourceBase):
 
         if hasattr(request, 'user'):
             data['user'] = request.user.id
+	    print "I got here on PUT!!"
         else:
             response = HttpResponse(status=codes.unprocessable_entity,
                                     content="Request user is not valid.")
@@ -94,6 +97,7 @@ class AssessmentResource(AssessmentResourceBase):
                                     content=self.prepare(request.instance),
                                     mimetype='application/json')
         else:
+	    print form.errors
             response = HttpResponse(status=codes.unprocessable_entity,
                                     content=dict(form.errors))
 

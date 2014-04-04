@@ -83,7 +83,6 @@ class AssessmentResourceTestCase(AuthenticatedBaseTestCase):
 		response = self.client.get('/api/assessments/1/',HTTP_ACCEPT= 'applicati    on/json')
 		self.assertEqual(response.status_code, codes.ok)
 		self.assertTrue(response.content)
-
 	
 	def test_post_all(self):
 		
@@ -171,5 +170,3 @@ class AssessmentResourceTestCase(AuthenticatedBaseTestCase):
 		self.assertEqual(int(a_id),a.id) 
 		self.assertEquals(count_before,count_after) #the count should not have changed!
 	
-
-

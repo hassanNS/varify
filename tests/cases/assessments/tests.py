@@ -1,16 +1,10 @@
-#Tested resources.py in assessments
-#1) get requests
-#2) post requests (along with verify counts)
-#3) put requests (along with verify counts)
-
-
-from django.test import TestCase
 import json
+import os
+from django.test import TestCase
 from restlib2.http import codes
 from django.http import HttpResponse
 from varify.assessments.resources import *
 from ..base import *
-import os
 from django.test.utils import override_settings
 from varify.assessments.models import Assessment, Pathogenicity, \
     ParentalResult, AssessmentCategory
@@ -40,7 +34,7 @@ class AssessmentResourceTestCase(AuthenticatedBaseTestCase):
 		# Synchronously work on queue
 		worker1 = get_worker('variants')
 		worker2 = get_worker('default')
-
+		
 		# Work on variants...
 		worker1.work(burst=True)
 
@@ -55,24 +49,23 @@ class AssessmentResourceTestCase(AuthenticatedBaseTestCase):
 		self.parental_result.save()
 		self.category = AssessmentCategory(name='other')
 		self.category.save()
-		super(AssessmentResourceTestCase,self).setUp()
+		super(AssessmentResourceTestCase, self).setUp()
 		
-	#test the get method of class AssessmentsResources
+	# Test the get method of class AssessmentsResources
 	def test_get_all(self):
-		response = self.client.get('/api/assessments/',HTTP_ACCEPT = 'application/json')
+		response = self.client.get('/api/assessments/', HTTP_ACCEPT='application/json')
 		self.assertEqual(response.status_code, codes.no_content)
-	
-	#try using a primary key of 999. Should return 404	
+		
+	# Test get method with empty assessment 
 	def test_get_when_empty(self):
-		response = self.client.get('/api/assessments/1/',HTTP_ACCEPT= 'application/json')
+		response = self.client.get('/api/assessments/1/', HTTP_ACCEPT='application/json')
 		self.assertEqual(response.status_code, codes.not_found)
 		
 		sample_id = Sample.objects.get(batch__name='batch1', name='NA12891').id
-
-		# Associate some knowledge capture with a sample result for the sample
-		# we are trying to delete.
+		# Create an assessment, then try another get call 
 		sample_result = Result.objects.filter(sample_id=sample_id)[0]
-		assessment = Assessment(sample_result=sample_result, user=self.user,
+		assessment = Assessment(sample_result=sample_result, 
+					user=self.user,
 					assessment_category=self.category,
 					sanger_requested=True,
 					pathogenicity=self.pathogenicity,
@@ -80,16 +73,15 @@ class AssessmentResourceTestCase(AuthenticatedBaseTestCase):
 					mother_result=self.parental_result)
 		assessment.save()
 		
-		response = self.client.get('/api/assessments/1/',HTTP_ACCEPT= 'applicati    on/json')
+		response = self.client.get('/api/assessments/1/', HTTP_ACCEPT='application/json')
+
 		self.assertEqual(response.status_code, codes.ok)
 		self.assertTrue(response.content)
-	
-	def test_post_all(self):
-		
-		sample_id = Sample.objects.get(batch__name='batch1', name='NA12891').id
 
-		# Associate some knowledge capture with a sample result for the sample
-		# we are trying to delete.
+	# Test post method
+	def test_post_all(self):
+		sample_id = Sample.objects.get(batch__name='batch1', name='NA12891').id
+		# First create an assessment object in json format
 		sample_result = Result.objects.filter(sample_id=sample_id)[0]
 		count_before = 	Assessment.objects.count()
 		#create a json to pass in
@@ -100,73 +92,67 @@ class AssessmentResourceTestCase(AuthenticatedBaseTestCase):
 				"father_result":self.parental_result.id,
 				"mother_result":self.parental_result.id,
 				"sanger_requested": True,
-				}	
-		#TESTING REGULAR POST
+				}
+		
+		#Testing a regular post
 		response = self.client.post('/api/assessments/',
 				data=json.dumps(a_obj),
 				content_type='application/json',
 				HTTP_ACCEPT='application/json'
 				)
 		count_after = Assessment.objects.count()
-
-		print(response.content)
-		self.assertEqual(response.status_code, codes.created) #tested if post was ok
+		# Post should be successful and new object should be added
+		self.assertEqual(response.status_code, codes.created) 
 		self.assertEqual(count_after, count_before+1)
 
-		#TESING POST WITH BAD VALUE
+		# Testing post with bad value
 		response = self.client.post('/api/assessments/',
-				data = json.dumps({}), #empty json 
+				data = json.dumps({}), 
 				content_type = 'application/json',
 				HTTP_ACCEPT = 'application/json')
-		#should be unprocessable!
-		self.assertEqual(response.status_code, codes.UNPROCESSABLE_ENTITY)
+		# Should be unprocessable
+		self.assertEqual(response.status_code, codes.unprocessable_entity)
 	
-	#do a put test by first creating an assessment then trying to retrive it
+	#  Testing PUT call
 	def test_put(self):
-
-		#first create an assessment object
+		# First create an assessment object
 		sample_id = Sample.objects.get(batch__name='batch1', name='NA12891').id
 											
 		sample_result = Result.objects.filter(sample_id=sample_id)[0]
-		a = Assessment(sample_result=sample_result, user=self.user,
+		assessment = Assessment(sample_result=sample_result, user=self.user,
 					assessment_category=self.category,
 					sanger_requested=False,
 					pathogenicity=self.pathogenicity,
 					father_result=self.parental_result,
 					mother_result=self.parental_result)
-		a.save()
-		a_id = str(a.id) #get the id for the put request
+		assessment.save()
+		# Get id for the put request and get count
+		a_id = str(assessment.id)
 		count_before = Assessment.objects.count()
 
-		#create a new category to change our assessment
+		# Create a new category to change our assessment
 		new_category = AssessmentCategory(name='dangerous')
 		new_category.save()
-
 		
-		#make the json object with the same values (except for the category) 
-		a_obj = {"sample_result":a.id,
-				"user":a.user.id, 
-				"assessment_category":new_category.id, #change the category, keep everything else the same
-				"pathogenicity":a.pathogenicity.id,
-				"father_result":a.father_result.id,
-				"mother_result":a.mother_result.id,
+		# Make the json object with the same values (except for the category) 
+		assessment_obj = {"sample_result":assessment.id,
+				"user":assessment.user.id, 
+				"assessment_category":new_category.id,
+				"pathogenicity":assessment.pathogenicity.id,
+				"father_result":assessment.father_result.id,
+				"mother_result":assessment.mother_result.id,
 				"sanger_requested":False,
 			}
 
-
-
-		print '/api/assessments/'+a_id+'/'
-		#try to change the assessment object's sanger_requested field
-		
-		response = self.client.put('/api/assessments/'+a_id+'/',
-						data=json.dumps(a_obj),
+		# Try to change the assessment object's category field
+		response = self.client.put('/api/assessments/{0}'.format(a_id),
+						data=json.dumps(assessment_obj),
 						content_type = 'application/json',
 						HTTP_ACCEPT = 'application/json')
-		print response.content
 		count_after = Assessment.objects.count()
 
-		self.assertEqual(response.status_code, codes.ok) #should be ok
-		#put request with the category should have changed our object!
-		self.assertEqual(int(a_id),a.id) 
-		self.assertEquals(count_before,count_after) #the count should not have changed!
-	
+		# Tests, object should be changed, count should be same
+		self.assertEqual(response.status_code, codes.ok) 
+		# The category should have changed
+		self.assertEqual(assessment.assessment_category.id,new_category.id) 
+		self.assertEquals(count_before,count_after) 

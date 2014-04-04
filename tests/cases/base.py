@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 
-
+# Class needed for authenticated test cases
 class BaseTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='root',

@@ -9,6 +9,7 @@ DATABASES = {
 
 INSTALLED_APPS = (
     'tests',
+    'tests.cases.samples',
     'tests.cases.south_tests',
     'tests.cases.geneset_form',
     'tests.cases.sample_load_process',
@@ -19,7 +20,6 @@ INSTALLED_APPS = (
     'varify.raw',
     'varify.raw.sources',
 
-    'varify.assessments',
     'varify.genome',
     'varify.phenotypes',
     'varify.genes',

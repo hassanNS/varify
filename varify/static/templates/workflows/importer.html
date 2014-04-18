@@ -1,0 +1,165 @@
+<div id="main" style="left:35%; position: absolute;">
+
+    <script type="text/javascript">
+
+       function parseResults(resultObject) {
+           // Function to loop through the JSON response of successful
+           // And unsuccessful matches after posting the spreadsheet query
+
+           goodResults = resultObject['results'];
+           content = [];
+           content.push('<h1>Matching Results:<\/h1>');
+
+           if (goodResults.length > 0){
+               content.push('<ul>');
+               // Generate html in order to show the matching results
+               for (var i=0; i<goodResults.length; i++){
+                    content.push('<li>');
+                    content.push('<font size="2">' + goodResults[i] + '<\/font>');
+                    content.push('<\/li>');
+               }
+               content.push('<\/ul>');
+           } // End if
+           else{
+               content.push('<ul><li><font size="5">No Results Found!<\/font><\/li><\/ul>');
+           }
+
+           return content.join('');
+
+       } // end parseResult
+
+
+       function parseNoMatches(resultObject) {
+            noMatches = resultObject['noResults'];
+            content = [];
+            content.push('<h1>No Matches<\/h1>');
+            content.push('<ul>');
+            if (noMatches.length > 0) {
+                for (var i=0; i<noMatches.length; i++){
+                    content.push('<li>');
+                    console.log(noMatches[i]);
+                    content.push('<font size="2">' + noMatches[i] + '<\/font>');
+                    content.push('<\/li>');
+                }
+            }// End If
+            content.push('<\/ul>');
+            return content.join('');
+       } //end parseNoMatches
+
+       // Manually retrive the csrftoken
+       function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie != '') {
+                console.log("I GET HERE");
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    console.log(cookie);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                } // end for
+            } // end if
+            return cookieValue;
+        } //end get cookie
+
+       var csrftoken = getCookie('varify_csrftoken');
+
+       // Retrive our DOM elements
+       var resultDisplay = document.getElementById('displayResults');
+       var showNoMatches = document.getElementById('displayNonMatches');
+
+       var form = document.getElementById('fileForm');
+       var fileInput = document.getElementById('input');
+       console.log("The csrftoken is "+csrftoken);
+
+       form.onsubmit = function(event) {
+            event.preventDefault();
+            uploadButton.innerHTML = 'Fetching...';
+
+            // Get selected files from the input
+            var files = fileInput.files;
+            var formData = new FormData();
+            var file = files[0];
+            var loader_gif = document.getElementById('loader')
+            loader_gif.style.visibility = 'visible';
+
+            // Get the sample name from the input field
+            var sample = document.getElementById('sampleName').value;
+            //var batch = document.getElementById('batchName').value;
+            console.log(sample)
+            // Check to see that file is right type
+            if (file.name.match('.xsls')||file.name.match('.xls')){
+
+                formData.append('qqfile', files[0], files[0].name );
+                formData.append('sampleName', sample);
+                //formData.append('batchName', batch);
+
+                // Set up a new request for the ajax call
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/samples/uploadFile/', true);
+
+                // Setup a handler for when the request finishes
+                 xhr.onload = function() {
+                    if (xhr.status == 200 || xhr.status == 204) {
+                        uploadButton.innerHTML = 'Fetch';
+                        loader_gif.style.visibility = 'hidden';
+                        alert('Results Fetched!');
+                        var response = this.responseText;
+                        var results = JSON.parse(response);
+                        console.log(results);
+
+                        // Show the results returned from the POST call
+                        var res = parseResults(results);
+                        console.log(res);
+                        resultDisplay.innerHTML=res;
+                        form.style.display='none';
+
+                        // Show the queries which produced no results
+                        var noMatches = parseNoMatches(results);
+                        console.log(noMatches);
+                        showNoMatches.innerHTML = noMatches
+
+                    }
+                    else {
+                        uploadButton.innerHTML = 'Fetch';
+                        loader_gif.style.visibility = 'hidden';
+                        alert ('There was a problem processing your request');
+                    }
+                } // end onload
+
+                // Send the call
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                xhr.setRequestHeader("X-Requested-With","XMLHttpRequest");
+                xhr.send(formData);
+            } // end if
+            else{
+                alert("Please upload an excel spreadsheet!");
+                uploadButton.innerHTML = 'Fetch';
+            }
+            } // end function
+
+    </script>
+
+    <div id="displayResults"></div>
+    <div id="displayNonMatches"></div>
+    <form id= "fileForm" action="/api/samples/uploadFile/" enctype="multipart/form-data" method="POST">
+        <p>Please Provide your Sample name</p>
+            <input id="sampleName" type="text">
+
+        <!-- <p> Please Provide the Batch name</p>
+        <input id="batchName" type="text"> --!>
+
+        <p id="para">Upload a Variant excel spreadsheet file</p>
+            <input type="file" id="input" name="fileupload">
+        <br>
+        <br>
+        <button type="submit" id="uploadButton">Fetch</button>
+        <div id="loader" style="visibility:hidden">
+            <img src="http://i.imgur.com/IXah7rp.gif" width="230" height="250"
+            alt="loading...">
+        </div>
+    </form>
+</div>

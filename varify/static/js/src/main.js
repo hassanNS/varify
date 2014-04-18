@@ -28,9 +28,10 @@ require({
     'tpl!../../templates/controls/polyphen.html',
     'tpl!../../templates/workflows/results.html',
     'tpl!../../templates/export/dialog.html',
-    'tpl!../../templates/sample/loader.html'
+    'tpl!../../templates/sample/loader.html',
+    'tpl!../../templates/workflows/importer.html'
 ], function(c, ui, csrf, header, result, phenotype, sift, polyphen, results,
-            exportDialog, sampleLoader) {
+            exportDialog, sampleLoader, importer) {
 
     // Session options
     var options = {
@@ -62,6 +63,7 @@ require({
     c.templates.set('varify/controls/polyphen', polyphen);
     c.templates.set('varify/workflows/results', results);
     c.templates.set('varify/sample/loader', sampleLoader);
+    c.templates.set('varify/workflows/importer', importer);
 
     // Globally disable stats on all fields
     c.config.set('fields.defaults.form.stats', false);
@@ -206,7 +208,6 @@ require({
             // Set the initial HTML with all the global views
             var main = $(c.config.get('main'));
             main.append.apply(main, elements);
-
             c.workflows = {
                 query: new c.ui.QueryWorkflow({
                     context: this.data.contexts.session,
@@ -223,7 +224,8 @@ require({
 
                 sampleload: new ui.SampleLoader({
                     context: this.data.contexts.session
-                })
+                }),
+               importer: new ui.Importer()
             };
 
             // Define routes
@@ -231,7 +233,12 @@ require({
                 id: 'query',
                 route: 'query/',
                 view: c.workflows.query
-            }, {
+            },{
+                id:'importer',
+                route:'importer/',
+                view: c.workflows.importer
+
+            } ,{
                 id: 'results',
                 route: 'results/',
                 view: c.workflows.results

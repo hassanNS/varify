@@ -26,6 +26,8 @@ urlpatterns = patterns(
         name='results'),
     url(r'^analysis/', TemplateView.as_view(template_name='index.html'),
         name='analysis'),
+    url(r'^importer/', TemplateView.as_view(template_name='index.html'),
+        name='importer'),
 
     # Required for opening a sample
     url(r'^sample/', TemplateView.as_view(template_name='index.html'),

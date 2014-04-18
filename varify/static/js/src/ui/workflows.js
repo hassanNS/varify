@@ -2,7 +2,8 @@
 
 define([
     'underscore',
-    './workflows/results'
+    './workflows/results',
+    './workflows/importer'
 ], function(_) {
 
     var mods = [].slice.call(arguments, 1);

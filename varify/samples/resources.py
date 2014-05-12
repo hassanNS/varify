@@ -336,7 +336,12 @@ class Upload_Res(ThrottledResource):
                                + 'spreadsheetml.sheet', )
 
     def change(self, ref, a1, a2):
-        """ Given ref allele1 and allele2, returns the type of change """
+        """ Given ref allele1 and allele2, returns the type of change.
+            The only case of an amino acid insertion is when the ref is
+            represented as a '.'
+            In all cases of an insertion or a deletion, the genomic starting
+            position is decremented by one and the ref and alt values change
+            to resemble their representations in the varify database."""
         if ref == '.':
             return 'INSERTION'
         elif a1 == '.' or a2 == '.':
@@ -348,10 +353,9 @@ class Upload_Res(ThrottledResource):
     # Matching queries
     def post(self, request):
 
-        # Testing with sample NA12891 and batch1
+        # Samplename must be unique and so must the batch. The latter is not
+        # specified in a variant list excel sheet.
         sampleName = request.POST['sampleName']
-        #batchName = request.POST['batchName'].lower()
-        #batch = Batch.objects.get(name=batchName)
         sample = Sample.objects.filter(name=sampleName)
         sample = sample[0]
 
@@ -413,34 +417,9 @@ class Upload_Res(ThrottledResource):
                         matches.update(result)
                         isFound = True
                 except:
-                    traceback.print_exc(file=sys.stdout)
+                    pass
 
-            # In the case this form has a genotype field instead of allele1,2
-            #elif 'genotype' in fields:
-            #    # A form w/ genotype field should also have an alt field
-            #    gtVcfValue = sheet.cell_value(row, fields.index('genotype'))
-            #    altValue = sheet.cell_value(row, fields.index('alternate'))
-
-            #    # Construct the genotype value based on our ref and alt
-            #    #gtValue = ""
-            #    #if gtVcfValue in ('1/1', '1/2'):
-            #    #    gtValue = altValue + '/' + altValue
-            #    #elif gtVcfValue == '0/1':
-            #    #    gtValue = refValue + '/' + altValue
-            #    #elif gtVcfValue == '0/0':
-            #    #    gtValue = refValue + '/' + altValue
-
-            #    genoMatch = Genotype.objects.get(value=gtVcfValue)
-            #    variantMatch = Variant.objects.get(pos=startValue,
-            #                                       ref=refValue,
-            #                                       alt=altValue,
-            #                                       chr_id=chrMatch.id)
-
-            #    result = Result.objects.filter(genotype=genoMatch.id,
-            #                                   variant_id=variantMatch.id)
-            #    matches.update(result)
             if ('allele 1' in fields and isFound is False):
-                # Retrive the two alleles and construct the genotype
                 allele1 = sheet.cell(row=row,
                                      column=fields.index('allele 1')).value
                 allele2 = sheet.cell(row=row,
@@ -451,7 +430,9 @@ class Upload_Res(ThrottledResource):
                     # the start position decrements by 1. We will then query
                     # using the position only
                     startValue -= 1
-                    # Determine the type of change
+                    # Determine the type of change. This is required to resolve
+                    # the case where two variants have the same genomic start
+                    # position.
                     change_type = self.change(refValue, allele1, allele2)
 
                 else:
@@ -467,6 +448,9 @@ class Upload_Res(ThrottledResource):
                 try:
                     correctVariant = ''
 
+                    # If there was a deletion or an insertion, make the query
+                    # using the position and the chromosome and resolve any
+                    # conflicts
                     if change_type:
                         variantMatch = \
                             Variant.objects.filter(pos=startValue,
@@ -475,10 +459,16 @@ class Upload_Res(ThrottledResource):
 
                         if len(variantMatch) > 1:
                             for match in variantMatch:
+                                # In the case of an insertion, the variants
+                                # reference string should have increased by 1
+                                # amino acid.
                                 if change_type == 'INSERTION' and \
                                         len(match.ref) == len(refValue) + 1:
                                     correctVariant = match
                                     break
+                                # In the case of a deletion (where the value
+                                # of the reference is '.'. The reference should
+                                # have a value of 1 amino acid.
                                 elif change_type == 'DELETION' and \
                                         len(match.ref) == 1:
                                     correctVariant = match

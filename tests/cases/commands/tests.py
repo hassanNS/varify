@@ -11,7 +11,6 @@ from varify.assessments.models import Assessment, Pathogenicity, \
     ParentalResult, AssessmentCategory
 from varify.samples.models import Sample, CohortSample, Result, SampleRun, \
     SampleManifest, Project, Cohort, Batch, CohortVariant, ResultScore
-from varify.variants.models import Variant
 from varify.samples.management.subcommands import gene_ranks
 from ..sample_load_process.tests import QueueTestCase
 from ...models import MockHandler
@@ -528,7 +527,7 @@ class DeleteTestCase(QueueTestCase):
 
         # Immediately validates and creates a sample
         management.call_command('samples', 'queue',
-                                startworkers=True)
+                                burst=True, startworkers=True)
 
         # Create and record some data that will be used to create knowledge
         # capture assessments later on.
@@ -659,7 +658,7 @@ class AlleleTestCase(QueueTestCase):
 
         # Immediately validates and creates a sample
         management.call_command('samples', 'queue',
-                                startworkers=True)
+                                burst=True, startworkers=True)
 
     def test_allele_freqs(self):
         management.call_command('samples', 'allele-freqs')
@@ -668,40 +667,3 @@ class AlleleTestCase(QueueTestCase):
         management.call_command('samples', 'allele-freqs')
         self.assertEqual(firstCount, CohortVariant.objects.count())
 
-
-@override_settings(VARIFY_SAMPLE_DIRS=SAMPLE_DIRS)
-class BigAutoFieldsTestCase(TestCase):
-    def setUp(self):
-        self.project = Project(id=1, name='', label='')
-        self.project.save()
-        self.batch = Batch(id=1, name='', project_id=self.project.id, label='')
-        self.batch.save()
-
-    def test_big_auto_fields(self):
-        # Test that BigAutoFields can exceed Django's default integer limit
-        result_count_before = Result.objects.count()
-        cohort_variant_count_before = CohortVariant.objects.count()
-        two_hundred_billion = int(200e9)
-
-        new_sample = Sample.objects.create(
-            id=1, label='',batch_id=self.batch.id, version=1,
-            count=1, published=True, name='', project_id=self.project.id)
-
-        new_variant = Variant.objects.create(
-            id=1, chr_id=1, pos=1, ref='', alt='', md5='')
-
-        new_result = Result.objects.create(
-            id=two_hundred_billion, sample_id=new_sample.id,
-            variant_id=new_variant.id)
-
-        new_score = ResultScore.objects.create(
-            id=1, result_id=new_result.id, rank=0, score=0)
-
-        new_cohort_variant = CohortVariant.objects.create(
-            id=two_hundred_billion, variant_id=new_variant.id, cohort_id=1)
-
-        result_count_after = Result.objects.count()
-        cohort_variant_count_after = CohortVariant.objects.count()
-
-        self.assertEqual(result_count_before+1, result_count_after)
-        self.assertEqual(cohort_variant_count_before+1, cohort_variant_count_after)

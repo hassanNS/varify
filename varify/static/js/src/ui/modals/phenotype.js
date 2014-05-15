@@ -8,20 +8,26 @@ define([
 ], function(_, Marionette, models, utils) {
 
     var Phenotype = Marionette.ItemView.extend({
-        className: 'modal hide',
+        className: 'phenotype-detail-modal modal hide',
 
         template: 'varify/modals/phenotype',
+
 
         ui: {
             annotations: '[data-target=annotations]',
             closeButton: '[data-target=close-phenotypes]',
             content: '[data-target=content]',
+            personalInfo: '[data-target=personal-info]',
             diagnoses: '[data-target=diagnoses]',
+            findings: '[data-target=findings]',
+            age: '[data-target=age]',
+            history: '[data-target=history]',
             error: '[data-target=error]',
             headerLabel: '[data-target=header-label]',
             loading: '[data-target=loading]',
             notes: '[data-target=notes]',
             pedigree: '[data-target=pedigree]',
+            thumbnail: '[data-target=thumbnail]',
             recalculateButton: '[data-target=recalculate]',
             updateTimes: '[data-target=update-times]',
             warning: '[data-target=warning]',
@@ -60,11 +66,19 @@ define([
         initialize: function() {
             this.data = {};
 
-            _.bindAll(this, 'onFetchError', 'onFetchSuccess');
+            _.bindAll(this, 'onFetchError');
 
             if (!(this.data.context = this.options.context)) {
                 throw new Error('context model required');
             }
+        },
+
+        serializeData: function() {
+            var data = {};
+            if (this.model) {
+                data = this.model.attributes;
+            }
+            return data;
         },
 
         renderHPO: function(annotations) {
@@ -168,44 +182,6 @@ define([
             return html.join('');
         },
 
-        renderUpdateTimes: function(attr) {
-            var html = [];
-
-            html.push('<div class=span6>');
-            html.push('<h6>Phenotypes Updated: </h6>' + attr.last_modified);    // jshint ignore: line
-            html.push('</div>');
-
-            html.push('<div class=span6>');
-            html.push('<h6>Rankings Updated: </h6>' + attr.phenotype_modified); // jshint ignore: line
-            html.push('</div>');
-
-            return html.join('');
-        },
-
-        onFetchSuccess: function(model, response, recalculateRankings) {
-            delete this.request;
-
-            this.ui.recalculateButton.prop('disabled', false);
-            this.ui.loading.hide();
-
-            var attr = model.attributes;
-
-            this.ui.annotations.html(this.renderHPO(attr.hpoAnnotations));
-            this.ui.notes.html(this.renderNotes(attr.notes));
-            this.ui.diagnoses.html(this.renderDiagnoses(attr));
-            this.ui.updateTimes.html(this.renderUpdateTimes(attr));
-
-            if (attr.pedigree) {
-                this.ui.pedigree.attr('href', attr.pedigree);
-                this.ui.pedigree.show();
-            }
-            else {
-                this.ui.pedigree.hide();
-            }
-
-            this.ui.content.show();
-        },
-
         onFetchError: function() {
             delete this.request;
 
@@ -216,6 +192,39 @@ define([
 
         recalculate: function() {
             this.retrievePhenotypes(true);
+        },
+
+        onRender: function(){
+            delete this.request;
+
+            this.ui.recalculateButton.prop('disabled', false);
+            this.ui.loading.hide();
+
+            var attr = {};
+
+            // Initially, the model is not set to anything. It is only after the
+            // request for the phenotype is successful that we have a model.
+            if (this.model) {attr=this.model.attributes;} else return;
+
+            this.ui.annotations.html(this.renderHPO(attr.hpoAnnotations));
+            this.ui.notes.html(this.renderNotes(attr.notes));
+            this.ui.diagnoses.html(this.renderDiagnoses(attr));
+
+            if (attr.pedigree) {
+                this.ui.pedigree.attr('href', attr.pedigree);
+                this.ui.pedigree.show();
+
+                if (attr.pedigree_thumbnail) { // jshint ignore: line
+                    this.ui.thumbnail.attr('src', attr.pedigree_thumbnail); // jshint ignore: line
+                    this.ui.thumbnail.show();
+                }
+            }
+            else {
+                this.ui.pedigree.hide();
+                this.ui.thumbnail.hide();
+            }
+
+            this.ui.content.show();
         },
 
         retrievePhenotypes: function(recalculateRankings) {
@@ -250,8 +259,13 @@ define([
                         recalculate_rankings: recalculateRankings   // jshint ignore: line
                     },
                     processData: true,
-                    success: function(model, response) {
-                        _this.onFetchSuccess(model, response, recalculateRankings);
+                    success: function(model) {
+                        // Set the the model so that the serializeData function
+                        // has access to the attributes.
+                        _this.model = model;
+                        _this.render();
+                        _this.ui.headerLabel.text('Phenotypes for ' + samples[0]);
+
                     },
                     error: this.onFetchError
                 });
@@ -264,7 +278,7 @@ define([
 
                 this.ui.error.show();
             }
-        },
+             },
 
         open: function() {
             this.retrievePhenotypes();

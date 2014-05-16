@@ -7,31 +7,52 @@ define([
     '../../utils'
 ], function(_, Marionette, models, utils) {
 
-    var Phenotype = Marionette.ItemView.extend({
+    var AnnotationItem = Marionette.ItemView.extend({
+        tagName:'li'
+    });
+
+    var DiagnoseItem = Marionette.ItemView.extend({
+        tagName:'li'
+    });
+
+
+    // CompositeViews to render all the necessary Annotations, Notes, and
+    // Diagnoses which are processed in the form of dictionaries.
+    var Annotations = Marionette.CompositeView.extend({
+
+    });
+
+    var Diagnoses = Marionette.CompositeView.extend({
+
+    });
+
+    var Phenotype = Marionette.Layout.extend({
         className: 'phenotype-detail-modal modal hide',
 
         template: 'varify/modals/phenotype',
 
 
         ui: {
-            annotations: '[data-target=annotations]',
             closeButton: '[data-target=close-phenotypes]',
             content: '[data-target=content]',
             personalInfo: '[data-target=personal-info]',
-            diagnoses: '[data-target=diagnoses]',
-            findings: '[data-target=findings]',
-            age: '[data-target=age]',
-            history: '[data-target=history]',
             error: '[data-target=error]',
-            headerLabel: '[data-target=header-label]',
-            loading: '[data-target=loading]',
+            diagnoses: '[data-target=diagnoses]',
+            annotations: '[data-target=annotations]',
             notes: '[data-target=notes]',
             pedigree: '[data-target=pedigree]',
+            headerLabel: '[data-target=header-label]',
+            loading: '[data-target=loading]',
             thumbnail: '[data-target=thumbnail]',
             recalculateButton: '[data-target=recalculate]',
-            updateTimes: '[data-target=update-times]',
             warning: '[data-target=warning]',
             hideOnRetrieve: '[data-action=hide-on-retrieve]'
+        },
+
+        regions: {
+            diagnoses: '[data-target=diagnoses]',
+            annotations: '[data-target=annotations]',
+            notes: '[data-target=notes]'
         },
 
         events: {

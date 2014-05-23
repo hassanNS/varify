@@ -31,6 +31,10 @@ urlpatterns = patterns(
     url(r'^sample/', TemplateView.as_view(template_name='index.html'),
         name='sample'),
 
+    # Required for opening a sample
+    url(r'^variants/', TemplateView.as_view(template_name='index.html'),
+        name='variants'),
+
     # Serrano provides the REST API
     url(r'^api/', include('serrano.urls')),
 

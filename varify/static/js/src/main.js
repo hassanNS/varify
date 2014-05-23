@@ -32,10 +32,11 @@ require({
     'tpl!../../templates/controls/sift.html',
     'tpl!../../templates/controls/polyphen.html',
     'tpl!../../templates/workflows/results.html',
+    'tpl!../../templates/workflows/variant-link.html',
     'tpl!../../templates/export/dialog.html',
     'tpl!../../templates/sample/loader.html'
 ], function(c, ui, csrf, header, result, phenotype, annotations, annotationsItem,
-       diagnoses, diagnosesItem, empty, sift, polyphen, results, exportDialog,
+       diagnoses, diagnosesItem, empty, sift, polyphen, results, variantlink, exportDialog,
        sampleLoader) {
 
     // Session options
@@ -72,6 +73,7 @@ require({
     c.templates.set('varify/controls/sift', sift);
     c.templates.set('varify/controls/polyphen', polyphen);
     c.templates.set('varify/workflows/results', results);
+    c.templates.set('varify/workflows/variantLink', variantlink);
     c.templates.set('varify/sample/loader', sampleLoader);
 
     // Globally disable stats on all fields
@@ -234,7 +236,9 @@ require({
 
                 sampleload: new ui.SampleLoader({
                     context: this.data.contexts.session
-                })
+                }),
+
+                sharevariant: new ui.VariantLink()
             };
 
             // Define routes
@@ -250,6 +254,10 @@ require({
                 id: 'sample-load',
                 route: 'sample/:sample_id/',
                 view: c.workflows.sampleload
+            }, {
+                id: 'variant-link',
+                route: 'variants/:variant_id/',
+                view: c.workflows.sharevariant
             }];
 
             c.workflows.workspace = new c.ui.WorkspaceWorkflow({
